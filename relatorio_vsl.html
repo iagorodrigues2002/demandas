@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Relatório — Análise de Operação VSL</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0f0f0e;
+    --surface: #1a1a18;
+    --surface2: #222220;
+    --border: #2e2e2a;
+    --text: #ffffff;
+    --muted: #888882;
+    --dim: #555550;
+    --red: #ff4444;
+    --red-bg: rgba(255,68,68,0.08);
+    --red-bd: rgba(255,68,68,0.2);
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.08);
+    --green-bd: rgba(34,197,94,0.2);
+    --yellow: #f59e0b;
+    --yellow-bg: rgba(245,158,11,0.08);
+    --yellow-bd: rgba(245,158,11,0.2);
+    --blue: #60a5fa;
+    --blue-bg: rgba(96,165,250,0.08);
+    --blue-bd: rgba(96,165,250,0.2);
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system,"system-ui","Segoe UI",sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 48px 24px 80px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  /* HEADER */
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+  h1 { font-size: 26px; font-weight: 600; letter-spacing: -.02em; margin-bottom: 10px; line-height: 1.2; }
+  .subtitle { color: var(--muted); font-size: 14px; max-width: 580px; margin-bottom: 40px; }
+
+  /* STATS */
+  .stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; margin-bottom: 32px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 12px; text-align: center; }
+  .stat.neg { border-color: var(--red-bd); background: var(--red-bg); }
+  .stat-n { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+  .stat.neg .stat-n { color: var(--red); }
+  .stat-l { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* ALERT */
+  .alert { border-radius: 8px; padding: 14px 18px; margin-bottom: 36px; border: 1px solid; }
+  .alert.red { background: var(--red-bg); border-color: var(--red-bd); }
+  .alert.green { background: var(--green-bg); border-color: var(--green-bd); }
+  .alert.yellow { background: var(--yellow-bg); border-color: var(--yellow-bd); }
+  .alert-t { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 5px; }
+  .alert.red .alert-t { color: var(--red); }
+  .alert.green .alert-t { color: var(--green); }
+  .alert.yellow .alert-t { color: var(--yellow); }
+  .alert p { color: var(--muted); font-size: 13px; }
+  .alert p strong { color: var(--text); }
+
+  /* SECTION */
+  .section { margin-bottom: 44px; }
+  .sh { display: flex; align-items: baseline; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .sh-eye { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+  .sh h2 { font-size: 15px; font-weight: 600; }
+  .sdesc { color: var(--muted); font-size: 13px; margin-bottom: 18px; line-height: 1.6; }
+
+  /* TABLE */
+  .tbl-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--surface); border-bottom: 1px solid var(--border); }
+  th { padding: 9px 14px; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); text-align: left; }
+  td { padding: 10px 14px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  td.mono { font-family: "SF Mono","Fira Code",monospace; font-size: 11px; color: var(--text); }
+  td.red { color: var(--red); font-weight: 600; }
+  td.green { color: var(--green); font-weight: 600; }
+
+  /* CALLOUT */
+  .callout { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 13px 16px; margin-bottom: 10px; display: flex; gap: 12px; }
+  .callout-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .callout-text { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .callout-text strong { color: var(--text); }
+
+  /* RETENTION */
+  .ret-label-row { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 20px 0 10px; }
+  .ret-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .ret-name { font-size: 12px; color: var(--muted); width: 210px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ret-bar-wrap { flex: 1; height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .ret-bar { height: 100%; border-radius: 99px; }
+  .ret-bar.lo { background: var(--red); }
+  .ret-bar.hi { background: var(--green); }
+  .ret-pct { font-size: 12px; font-weight: 600; width: 44px; text-align: right; flex-shrink: 0; }
+  .ret-pct.lo { color: var(--red); }
+  .ret-pct.hi { color: var(--green); }
+
+  /* CARDS */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+  .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; margin-bottom: 12px; }
+  .tag.yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-bd); }
+  .tag.blue { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-bd); }
+  .card-metrics { display: flex; gap: 14px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .cm-v { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+  .cm-v.red { color: var(--red); }
+  .cm-l { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+  .card p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 7px; }
+  .card p:first-of-type { margin-top: 0; }
+  .card p strong { color: var(--text); }
+
+  /* PRIORITY */
+  .plist { display: flex; flex-direction: column; gap: 10px; }
+  .pitem { display: flex; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; align-items: flex-start; }
+  .pnum { font-size: 11px; font-weight: 700; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .pnum.p1 { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-bd); }
+  .pnum.p2 { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-bd); }
+  .pnum.p3 { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-bd); }
+  .pnum.p4 { background: var(--surface2); color: var(--dim); border: 1px solid var(--border); }
+  .pitem h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .pitem p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* FOOTER */
+  .footer { padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); }
+
+  @media(max-width:600px){
+    .stats { grid-template-columns: repeat(3,1fr); }
+    .cards { grid-template-columns: 1fr; }
+    body { padding: 28px 16px 60px; }
+    .ret-name { width: 140px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="eyebrow">Relatório de Operação · 25/03/2026</div>
+  <h1>Análise de Performance — VSL & RedTrack</h1>
+  <p class="subtitle">Cruzamento de dados entre VTurb (retenção) e RedTrack (tráfego/conversão). Diagnóstico de curvas de retenção e priorização de ações para virar a operação.</p>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat neg"><div class="stat-n">$7.225</div><div class="stat-l">Gasto total</div></div>
+    <div class="stat neg"><div class="stat-n">$3.390</div><div class="stat-l">Receita total</div></div>
+    <div class="stat neg"><div class="stat-n">-53%</div><div class="stat-l">ROI geral</div></div>
+    <div class="stat"><div class="stat-n">15</div><div class="stat-l">Conversões</div></div>
+    <div class="stat"><div class="stat-n">$56</div><div class="stat-l">CPA médio</div></div>
+  </div>
+
+  <div class="alert red">
+    <div class="alert-t">Diagnóstico Geral</div>
+    <p>A operação inteira está perdendo dinheiro em quase toda linha. Só 1 campanha está no verde — <strong>Chocob 1-1 COPY</strong> com ROI de 8,71%. Esse é o sinal mais importante de todo o painel.</p>
+  </div>
+
+  <!-- CRUZAMENTO -->
+  <div class="section">
+    <div class="sh">
+      <span class="sh-eye">Cruzamento</span>
+      <h2>VTurb ↔ RedTrack — Matches Confirmados</h2>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>VTurb</th>
+            <th>RedTrack</th>
+            <th>Views</th>
+            <th>Conv.</th>
+            <th>ROI</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">VSL 2-3 LipoJaro (Gelatin Trick + Dr. Oz)</td>
+            <td class="mono">Gelatin Trick 1-2 LIPOJARO DR.OZ</td>
+            <td>752 ≈ 754 ✓</td>
+            <td>2</td>
+            <td class="red">-28,55%</td>
+          </tr>
+          <tr>
+            <td class="mono">JellyBurn VSL 01 MOD ML90</td>
+            <td class="mono">Gelatin Trick 1-1 Dr. Oz</td>
+            <td>2.614 ≈ 2.750 ✓</td>
+            <td>6</td>
+            <td class="red">-52,62%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CURVA -->
+  <div class="section">
+    <div class="sh">
+      <span class="sh-eye">Problema Central</span>
+      <h2>Curva de Retenção — Padrão Identificado</h2>
+    </div>
+    <p class="sdesc">Ambas as VSLs mostram o mesmo padrão. A queda é suave — não abrupta em um ponto único — indicando que o problema não é um momento isolado. É o hook inteiro sendo lento ou genérico.</p>
+
+    <div class="callout"><span class="callout-icon">📉</span><div class="callout-text"><strong>0–5 min: Queda de 60%+</strong> — Metade da audiência sai antes de 5 minutos nas duas VSLs. O criativo promete algo que a abertura não entrega rápido o suficiente. O avatar decide que "não é para mim" ou "vai demorar muito".</div></div>
+    <div class="callout"><span class="callout-icon">📉</span><div class="callout-text"><strong>5–13 min: Sangramento constante</strong> — A curva cai de ~40% para ~20% de forma linear, sem platôs. Sinal de que não há pattern interrupts — nenhum momento de virada que force o viewer a continuar.</div></div>
+    <div class="callout"><span class="callout-icon">⚠️</span><div class="callout-text"><strong>13–38 min: Bleed lento</strong> — De ~20% até o pitch. Conteúdo neutro que vai esvaziando: não empurra para fora rapidamente, mas também não prende.</div></div>
+
+    <div class="ret-label-row">Retenção no Pitch — Benchmark 15–25%</div>
+
+    <div class="ret-row">
+      <span class="ret-name">JellyBurn MOD ML90 (53:41)</span>
+      <div class="ret-bar-wrap"><div class="ret-bar lo" style="width:43.8%"></div></div>
+      <span class="ret-pct lo">10,95%</span>
+    </div>
+    <div class="ret-row">
+      <span class="ret-name">LipoJaro VSL 2-3 (54:52)</span>
+      <div class="ret-bar-wrap"><div class="ret-bar lo" style="width:35.3%"></div></div>
+      <span class="ret-pct lo">8,83%</span>
+    </div>
+    <div class="ret-row">
+      <span class="ret-name">Benchmark mínimo saudável</span>
+      <div class="ret-bar-wrap"><div class="ret-bar hi" style="width:60%"></div></div>
+      <span class="ret-pct hi">15–25%</span>
+    </div>
+
+    <div class="alert yellow" style="margin-top:18px">
+      <div class="alert-t">Potencial de Escala</div>
+      <p>Se a JellyBurn MOD chegasse a 20% de retenção no pitch (de 10,95% atual), a audiência no pitch dobraria — de 216 para ~400 pessoas. Com a mesma taxa de conversão, a receita dobraria <strong>sem gastar mais um centavo em tráfego</strong>.</p>
+    </div>
+  </div>
+
+  <!-- DIAGNÓSTICO -->
+  <div class="section">
+    <div class="sh">
+      <span class="sh-eye">Diagnóstico</span>
+      <h2>Análise Individual por VSL</h2>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="tag yellow">JellyBurn VSL 01 MOD — ML90</div>
+        <div class="card-metrics">
+          <div><div class="cm-v">10,95%</div><div class="cm-l">Ret. Pitch</div></div>
+          <div><div class="cm-v red">-52,62%</div><div class="cm-l">ROI</div></div>
+          <div><div class="cm-v">216</div><div class="cm-l">No Pitch</div></div>
+          <div><div class="cm-v">6</div><div class="cm-l">Vendas</div></div>
+        </div>
+        <p><strong style="color:var(--green)">✓ Funciona:</strong> Melhor retenção no pitch, melhor engajamento (19,14%), maior audiência chegando ao pitch. É a VSL mais próxima de funcionar.</p>
+        <p><strong style="color:var(--red)">✗ Problema:</strong> Queda brutal nos primeiros 5 min. CPA de ~$464 por conversão.</p>
+        <p><strong>→ Ação:</strong> Testar novo hook nos primeiros 60–90s. Meta: subir de 10,95% para 15%+.</p>
+      </div>
+      <div class="card">
+        <div class="tag blue">LipoJaro VSL 2-3 — Gelatin Trick + Dr. Oz</div>
+        <div class="card-metrics">
+          <div><div class="cm-v">8,83%</div><div class="cm-l">Ret. Pitch</div></div>
+          <div><div class="cm-v red">-28,55%</div><div class="cm-l">ROI</div></div>
+          <div><div class="cm-v">52</div><div class="cm-l">No Pitch</div></div>
+          <div><div class="cm-v">2</div><div class="cm-l">Vendas</div></div>
+        </div>
+        <p><strong style="color:var(--green)">✓ Funciona:</strong> Única com receita confirmada (R$3.124). O ângulo Dr. Oz está ressoando com o avatar — é o menos negativo da operação.</p>
+        <p><strong style="color:var(--red)">✗ Problema:</strong> Menor audiência chegando ao pitch (52 de 600 plays). Retenção caindo mais rápido que a JellyBurn.</p>
+        <p><strong>→ Ação:</strong> Escalar imediatamente. Manter o ângulo Dr. Oz intacto — é o mecanismo que está convertendo.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRIORIDADES -->
+  <div class="section">
+    <div class="sh">
+      <span class="sh-eye">Plano de Ação</span>
+      <h2>4 Ações em Ordem de Prioridade</h2>
+    </div>
+    <div class="plist">
+      <div class="pitem">
+        <div class="pnum p1">1</div>
+        <div>
+          <h4>Escalar o LipoJaro com o ângulo Dr. Oz</h4>
+          <p>É o único ativo com ROI próximo de viável e com receita real. Aumentar o budget nessa lander imediatamente. O mecanismo Dr. Oz + Gelatin Trick está funcionando melhor que todos os outros ângulos testados.</p>
+        </div>
+      </div>
+      <div class="pitem">
+        <div class="pnum p2">2</div>
+        <div>
+          <h4>Testar novo hook para JellyBurn MOD</h4>
+          <p>Fazer uma versão com os primeiros 90 segundos reescritos — mais direto à dor, mais específico no resultado prometido, mais urgente. Manter o restante idêntico para isolar o impacto do hook.</p>
+        </div>
+      </div>
+      <div class="pitem">
+        <div class="pnum p3">3</div>
+        <div>
+          <h4>Analisar e escalar o Chocob</h4>
+          <p>Único ROI positivo da operação (8,71%). Puxar a curva de retenção no VTurb. Se a retenção no pitch for boa, esse é o ativo para rodar com budget enquanto as outras VSLs são otimizadas.</p>
+        </div>
+      </div>
+      <div class="pitem">
+        <div class="pnum p4">4</div>
+        <div>
+          <h4>Pausar as VSLs sem match confirmado</h4>
+          <p>Gelatide Lead 1 (-61,95%) e JellyBurn MICROLEAD1 (-100%) estão drenando budget sem dados claros de retorno. Pausar e realocar o gasto para o LipoJaro e o Chocob.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Gerado em 25/03/2026</span>
+    <span>L&amp;J — Análise de Operação</span>
+  </div>
+
+</div>
+</body>
+</html>
